@@ -13,14 +13,13 @@ def parse_time(t):
 
 
 def adjust_for_pm(start, end):
-    """Adjust end time if it's numerically less than start time (PM adjustment)."""
+    """If end time is numerically less than start, assume PM."""
     if end < start:
         end += 12
     return end
 
 
 def calculate_duration(start_str, end_str):
-    """Return duration from start to end time in hours with 0-100 minute conversion."""
     start = parse_time(start_str)
     end = parse_time(end_str)
     end = adjust_for_pm(start, end)
@@ -38,11 +37,12 @@ def main():
         pass
 
     task_times = defaultdict(float)
+    task_order = []  # Preserve order of tasks
     total_hours = 0.0
 
     for line in input_lines:
         line = line.strip()
-        if not re.match(r'^\d', line):  # Ignore lines that don't start with a digit
+        if not re.match(r'^\d', line):
             continue
 
         match = re.match(r'^(\d{1,2}(?:\.\d{1,2})?)-(\d{1,2}(?:\.\d{1,2})?)\s+(.*)', line)
@@ -53,22 +53,33 @@ def main():
         if task.lower().startswith("break"):
             continue
 
+        if task not in task_order:
+            task_order.append(task)
+
         duration = calculate_duration(start_time, end_time)
         task_times[task] += duration
         total_hours += duration
 
+    # Prepare output lines
     output_lines = [f"{task} ({round(time, 2)})" for task, time in task_times.items()]
 
-    # Display output
+    # Print results
     for line in output_lines:
         print(line)
 
     print(f"\nTotal hours: {round(total_hours, 2)}")
 
-    # Copy to clipboard with newlines (for single cell in Google Sheets)
+    # Copy to clipboard (multi-line cell for Google Sheets)
+    # clipboard_content = "\n".join(output_lines + [f"Total ({round(total_hours, 2)})"])
     clipboard_content = "\n".join(output_lines)
     pyperclip.copy(clipboard_content)
     print("\n✅ Output copied to clipboard with line breaks!")
+    print("📋 Paste into Google Sheets by entering the cell (double-click or F2) before pasting.\n")
+
+    # --- NEW FEATURE: Print "Yesterday" task list ---
+    print("Yesterday")
+    for task in task_order:
+        print(f"• {task}")  # Slack-friendly bullet point
 
 
 if __name__ == "__main__":
